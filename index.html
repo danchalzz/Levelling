@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SYSTEM — Daniel Henry</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ======================================================
+    INDEX.HTML — The Structure
+    Think of this as the skeleton. It defines what sections
+    exist on the page. The actual content is filled in by app.js.
+  ====================================================== -->
+
+  <div id="app">
+
+    <!-- TOP HEADER -->
+    <header class="header">
+      <div class="header-label">— system interface v2.1 —</div>
+      <h1 class="header-name">DANIEL HENRY</h1>
+      <div class="header-rank">✦ RANK E — AWAKENED ✦</div>
+    </header>
+
+    <!-- XP BAR -->
+    <div class="xp-bar-container">
+      <span class="xp-label">XP</span>
+      <div class="xp-bar">
+        <div class="xp-fill" id="xp-fill"></div>
+      </div>
+      <span class="xp-value" id="xp-value">0 XP</span>
+    </div>
+
+    <!-- STATS ROW -->
+    <div class="stats-row">
+      <div class="stat-box"><div class="stat-value" id="stat-intellect">0</div><div class="stat-label">INTELLECT</div></div>
+      <div class="stat-box"><div class="stat-value" id="stat-adaptability">0</div><div class="stat-label">ADAPTABILITY</div></div>
+      <div class="stat-box"><div class="stat-value" id="stat-applications">0</div><div class="stat-label">APPLICATIONS</div></div>
+      <div class="stat-box"><div class="stat-value" id="stat-interviews">0</div><div class="stat-label">INTERVIEWS</div></div>
+      <div class="stat-box"><div class="stat-value" id="stat-portfolio">0</div><div class="stat-label">PORTFOLIO</div></div>
+      <div class="stat-box"><div class="stat-value" id="stat-streak">0</div><div class="stat-label">DAILY STREAK</div></div>
+    </div>
+
+    <!-- TABS -->
+    <nav class="tabs">
+      <button class="tab active" data-tab="quests">QUESTS</button>
+      <button class="tab" data-tab="daily">DAILY</button>
+      <button class="tab" data-tab="skills">SKILLS</button>
+      <button class="tab" data-tab="log">LOG</button>
+      <button class="tab" data-tab="profile">PROFILE</button>
+    </nav>
+
+    <!-- TAB CONTENT PANELS -->
+    <main class="panel">
+
+      <!-- QUESTS TAB -->
+      <div id="tab-quests" class="tab-panel active">
+        <div id="alerts-container"></div>
+        <div id="danger-quests"></div>
+        <div id="active-quests"></div>
+        <div id="pending-quests"></div>
+        <div id="done-quests"></div>
+        <button class="btn-add" id="btn-add-quest">+ ADD QUEST</button>
+      </div>
+
+      <!-- DAILY TAB -->
+      <div id="tab-daily" class="tab-panel hidden">
+        <div id="daily-tasks"></div>
+        <button class="btn-add" id="btn-add-daily">+ ADD DAILY TASK</button>
+      </div>
+
+      <!-- SKILLS TAB -->
+      <div id="tab-skills" class="tab-panel hidden">
+        <div id="skills-content">
+          <p class="placeholder">Skills tracking coming soon. Track your Python, SQL, Excel progress here.</p>
+        </div>
+      </div>
+
+      <!-- LOG TAB -->
+      <div id="tab-log" class="tab-panel hidden">
+        <div id="log-content"></div>
+      </div>
+
+      <!-- PROFILE TAB -->
+      <div id="tab-profile" class="tab-panel hidden">
+        <div id="profile-content">
+          <div class="profile-row"><span class="profile-label">NAME</span><span class="profile-value">Daniel Henry Charles</span></div>
+          <div class="profile-row"><span class="profile-label">RANK</span><span class="profile-value">E — AWAKENED</span></div>
+          <div class="profile-row"><span class="profile-label">TRACK</span><span class="profile-value">AI QA · DATA · TEACH</span></div>
+          <div class="profile-row"><span class="profile-label">BASE</span><span class="profile-value">Cotonou, Benin</span></div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- BACKUP BUTTONS -->
+    <div class="backup-bar">
+      <button class="btn-backup" id="btn-export">⬇ EXPORT BACKUP</button>
+      <button class="btn-backup btn-import-trigger" id="btn-import">⬆ IMPORT BACKUP</button>
+      <input type="file" id="import-file" accept=".json" style="display:none" />
+    </div>
+
+  </div>
+
+  <!-- MODAL for adding/editing quests -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-box">
+      <h2 class="modal-title" id="modal-title">NEW QUEST</h2>
+      <input type="text" id="quest-name" placeholder="Quest name" class="modal-input" />
+      <textarea id="quest-desc" placeholder="Description / mission brief" class="modal-input" rows="3"></textarea>
+      <select id="quest-track" class="modal-input">
+        <option value="AI QA">AI QA</option>
+        <option value="DATA">DATA</option>
+        <option value="TRAIN">TRAIN</option>
+        <option value="INFRA">INFRA</option>
+        <option value="FIELD">FIELD</option>
+        <option value="TEACH">TEACH</option>
+        <option value="RECRUIT">RECRUIT</option>
+      </select>
+      <select id="quest-status" class="modal-input">
+        <option value="active">ACTIVE</option>
+        <option value="pending">PENDING</option>
+        <option value="danger">DANGER</option>
+        <option value="done">DONE</option>
+      </select>
+      <input type="text" id="quest-deadline" placeholder="Deadline (e.g. JUL 22) — optional" class="modal-input" />
+      <div class="modal-buttons">
+        <button class="btn-save" id="btn-save-quest">SAVE</button>
+        <button class="btn-cancel" id="btn-cancel-quest">CANCEL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load the app logic last -->
+  <script src="app.js"></script>
+
+</body>
+</html>
