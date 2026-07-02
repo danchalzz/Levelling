@@ -7,11 +7,10 @@
 // ============================================================
 
 import express from 'express';
-import pg from 'pg';
+import { neon } from '@neondatabase/serverless';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-const { Pool } = pg;
 const app = express();
 const PORT = process.env.PORT || 3000;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -19,21 +18,22 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // --- DATABASE CONNECTION ---
 // This reads the DATABASE_URL secret you set in Railway.
 // It connects to your Neon database automatically.
-const db = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
+if (!process.env.DATABASE_URL) {
+  console.error('❌ DATABASE_URL is not set. Please add it in Railway → Variables.');
+  process.exit(1);
+}
+const db = neon(process.env.DATABASE_URL);
 
 // --- SETUP ---
 // This makes sure the data table exists in your database when the app starts.
 async function setupDatabase() {
-  await db.query(`
+  await db`
     CREATE TABLE IF NOT EXISTS system_state (
       id INTEGER PRIMARY KEY DEFAULT 1,
       state JSONB NOT NULL,
       updated_at TIMESTAMPTZ DEFAULT NOW()
     )
-  `);
+  `;
   console.log('✅ Database ready');
 }
 
@@ -50,14 +50,14 @@ app.use(express.static(path.join(__dirname, 'public')));
 // The frontend asks: "GET /api/state" → server returns your saved data
 app.get('/api/state', async (req, res) => {
   try {
-    const result = await db.query('SELECT state FROM system_state WHERE id = 1');
+    const rows = await db`SELECT state FROM system_state WHERE id = 1`;
 
-    if (result.rows.length === 0) {
+    if (rows.length === 0) {
       // No data yet — return empty defaults
       return res.json({ quests: [], daily: {}, totalXP: 0, log: [], dismissedNotifs: [] });
     }
 
-    res.json(result.rows[0].state);
+    res.json(rows[0].state);
   } catch (err) {
     console.error('Error loading state:', err);
     res.status(500).json({ error: 'Could not load data' });
@@ -70,12 +70,13 @@ app.post('/api/state', async (req, res) => {
   try {
     const newState = req.body;
 
-    await db.query(`
+    const stateJson = JSON.stringify(newState);
+    await db`
       INSERT INTO system_state (id, state, updated_at)
-      VALUES (1, $1, NOW())
+      VALUES (1, ${stateJson}::jsonb, NOW())
       ON CONFLICT (id) DO UPDATE
-        SET state = $1, updated_at = NOW()
-    `, [JSON.stringify(newState)]);
+        SET state = ${stateJson}::jsonb, updated_at = NOW()
+    `;
 
     res.json({ success: true });
   } catch (err) {
