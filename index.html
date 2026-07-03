@@ -1,139 +1,238 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SYSTEM — Daniel Henry</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
+/* ============================================================
+   STYLE.CSS — The Appearance
+   This file controls all the colours, fonts, spacing and layout.
+   If you want to change how something looks, change it here.
+   ============================================================ */
 
-  <!-- ======================================================
-    INDEX.HTML — The Structure
-    Think of this as the skeleton. It defines what sections
-    exist on the page. The actual content is filled in by app.js.
-  ====================================================== -->
+/* --- FONTS & ROOT VARIABLES --- */
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
 
-  <div id="app">
+:root {
+  --bg:        #080c14;
+  --bg2:       #0d1420;
+  --bg3:       #111927;
+  --border:    #1e3a5f;
+  --cyan:      #00d4ff;
+  --cyan-dim:  #0a7a99;
+  --gold:      #f0c040;
+  --red:       #ff4444;
+  --green:     #00ff88;
+  --grey:      #4a6080;
+  --text:      #c8dff0;
+  --text-dim:  #5a7a9a;
+}
 
-    <!-- TOP HEADER -->
-    <header class="header">
-      <div class="header-label">— system interface v2.1 —</div>
-      <h1 class="header-name">DANIEL HENRY</h1>
-      <div class="header-rank">✦ RANK E — AWAKENED ✦</div>
-    </header>
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-    <!-- XP BAR -->
-    <div class="xp-bar-container">
-      <span class="xp-label">XP</span>
-      <div class="xp-bar">
-        <div class="xp-fill" id="xp-fill"></div>
-      </div>
-      <span class="xp-value" id="xp-value">0 XP</span>
-    </div>
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Share Tech Mono', monospace;
+  min-height: 100vh;
+}
 
-    <!-- STATS ROW -->
-    <div class="stats-row">
-      <div class="stat-box"><div class="stat-value" id="stat-intellect">0</div><div class="stat-label">INTELLECT</div></div>
-      <div class="stat-box"><div class="stat-value" id="stat-adaptability">0</div><div class="stat-label">ADAPTABILITY</div></div>
-      <div class="stat-box"><div class="stat-value" id="stat-applications">0</div><div class="stat-label">APPLICATIONS</div></div>
-      <div class="stat-box"><div class="stat-value" id="stat-interviews">0</div><div class="stat-label">INTERVIEWS</div></div>
-      <div class="stat-box"><div class="stat-value" id="stat-portfolio">0</div><div class="stat-label">PORTFOLIO</div></div>
-      <div class="stat-box"><div class="stat-value" id="stat-streak">0</div><div class="stat-label">DAILY STREAK</div></div>
-    </div>
+#app {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+}
 
-    <!-- TABS -->
-    <nav class="tabs">
-      <button class="tab active" data-tab="quests">QUESTS</button>
-      <button class="tab" data-tab="daily">DAILY</button>
-      <button class="tab" data-tab="skills">SKILLS</button>
-      <button class="tab" data-tab="log">LOG</button>
-      <button class="tab" data-tab="profile">PROFILE</button>
-    </nav>
+/* --- HEADER --- */
+.header { text-align: center; padding: 30px 0 20px; }
+.header-label { color: var(--cyan-dim); font-size: 0.75rem; letter-spacing: 4px; margin-bottom: 8px; }
+.header-name { font-family: 'Orbitron', monospace; font-size: 2.2rem; font-weight: 900; color: var(--text); letter-spacing: 6px; }
+.header-rank { color: var(--cyan); font-size: 0.8rem; letter-spacing: 3px; margin-top: 8px; }
 
-    <!-- TAB CONTENT PANELS -->
-    <main class="panel">
+/* --- XP BAR --- */
+.xp-bar-container {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--bg2); border: 1px solid var(--border);
+  padding: 10px 16px; margin: 16px 0;
+}
+.xp-label { color: var(--cyan); font-size: 0.75rem; min-width: 24px; }
+.xp-bar { flex: 1; height: 8px; background: var(--bg3); border: 1px solid var(--border); }
+.xp-fill { height: 100%; background: var(--cyan); transition: width 0.5s; width: 0%; }
+.xp-value { color: var(--text-dim); font-size: 0.75rem; min-width: 80px; text-align: right; }
 
-      <!-- QUESTS TAB -->
-      <div id="tab-quests" class="tab-panel active">
-        <div id="alerts-container"></div>
-        <div id="danger-quests"></div>
-        <div id="active-quests"></div>
-        <div id="pending-quests"></div>
-        <div id="done-quests"></div>
-        <button class="btn-add" id="btn-add-quest">+ ADD QUEST</button>
-      </div>
+/* --- STATS ROW --- */
+.stats-row {
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
+  margin-bottom: 20px;
+}
+.stat-box {
+  background: var(--bg2); border: 1px solid var(--border);
+  padding: 12px 8px; text-align: center;
+}
+.stat-value { font-family: 'Orbitron', monospace; font-size: 1.4rem; color: var(--cyan); }
+.stat-label { font-size: 0.6rem; color: var(--text-dim); margin-top: 4px; letter-spacing: 1px; }
 
-      <!-- DAILY TAB -->
-      <div id="tab-daily" class="tab-panel hidden">
-        <div id="daily-tasks"></div>
-        <button class="btn-add" id="btn-add-daily">+ ADD DAILY TASK</button>
-      </div>
+/* --- TABS --- */
+.tabs {
+  display: flex; border-bottom: 1px solid var(--border);
+  margin-bottom: 20px; gap: 0;
+}
+.tab {
+  background: none; border: none; border-bottom: 2px solid transparent;
+  color: var(--text-dim); padding: 10px 20px; cursor: pointer;
+  font-family: 'Share Tech Mono', monospace; font-size: 0.8rem;
+  letter-spacing: 2px; transition: all 0.2s;
+}
+.tab:hover { color: var(--cyan); }
+.tab.active { color: var(--cyan); border-bottom-color: var(--cyan); }
 
-      <!-- SKILLS TAB -->
-      <div id="tab-skills" class="tab-panel hidden">
-        <div id="skills-content">
-          <p class="placeholder">Skills tracking coming soon. Track your Python, SQL, Excel progress here.</p>
-        </div>
-      </div>
+/* --- PANELS --- */
+.panel { min-height: 400px; }
+.tab-panel { display: block; }
+.tab-panel.hidden { display: none; }
 
-      <!-- LOG TAB -->
-      <div id="tab-log" class="tab-panel hidden">
-        <div id="log-content"></div>
-      </div>
+/* --- SECTION HEADERS --- */
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; margin: 16px 0 8px;
+  border: 1px solid var(--border); background: var(--bg2);
+  font-size: 0.75rem; letter-spacing: 2px; color: var(--cyan-dim);
+  cursor: pointer;
+}
+.section-header.danger { border-color: var(--red); color: var(--red); }
+.section-header.active { border-color: var(--cyan); color: var(--cyan); }
+.section-header.done { border-color: var(--grey); color: var(--grey); }
 
-      <!-- PROFILE TAB -->
-      <div id="tab-profile" class="tab-panel hidden">
-        <div id="profile-content">
-          <div class="profile-row"><span class="profile-label">NAME</span><span class="profile-value">Daniel Henry Charles</span></div>
-          <div class="profile-row"><span class="profile-label">RANK</span><span class="profile-value">E — AWAKENED</span></div>
-          <div class="profile-row"><span class="profile-label">TRACK</span><span class="profile-value">AI QA · DATA · TEACH</span></div>
-          <div class="profile-row"><span class="profile-label">BASE</span><span class="profile-value">Cotonou, Benin</span></div>
-        </div>
-      </div>
+/* --- QUEST CARDS --- */
+.quest-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  padding: 14px 16px; margin-bottom: 8px;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 12px;
+}
+.quest-card.danger { border-left: 3px solid var(--red); }
+.quest-card.active { border-left: 3px solid var(--cyan); }
+.quest-card.pending { border-left: 3px solid var(--grey); }
+.quest-card.done { border-left: 3px solid var(--green); opacity: 0.6; }
 
-    </main>
+.quest-info { flex: 1; }
+.quest-name { font-size: 0.9rem; color: var(--text); margin-bottom: 4px; }
+.quest-desc { font-size: 0.75rem; color: var(--text-dim); line-height: 1.5; margin-bottom: 8px; }
+.quest-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+.tag {
+  font-size: 0.65rem; padding: 2px 8px; border: 1px solid var(--border);
+  color: var(--cyan-dim); letter-spacing: 1px;
+}
+.tag.deadline { border-color: var(--gold); color: var(--gold); }
+.tag.danger { border-color: var(--red); color: var(--red); }
+.tag.done { border-color: var(--green); color: var(--green); }
+.tag.active { border-color: var(--cyan); color: var(--cyan); }
+.tag.pending { border-color: var(--grey); color: var(--grey); }
 
-    <!-- BACKUP BUTTONS -->
-    <div class="backup-bar">
-      <button class="btn-backup" id="btn-export">⬇ EXPORT BACKUP</button>
-      <button class="btn-backup btn-import-trigger" id="btn-import">⬆ IMPORT BACKUP</button>
-      <input type="file" id="import-file" accept=".json" style="display:none" />
-    </div>
+.quest-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.btn-edit, .btn-delete, .btn-status {
+  background: none; border: 1px solid var(--border);
+  color: var(--text-dim); padding: 4px 10px; cursor: pointer;
+  font-family: 'Share Tech Mono', monospace; font-size: 0.7rem;
+  transition: all 0.2s;
+}
+.btn-edit:hover { border-color: var(--cyan); color: var(--cyan); }
+.btn-delete:hover { border-color: var(--red); color: var(--red); }
+.btn-status:hover { border-color: var(--green); color: var(--green); }
 
-  </div>
+/* --- ADD BUTTON --- */
+.btn-add {
+  background: none; border: 1px dashed var(--border);
+  color: var(--text-dim); padding: 10px; width: 100%; margin-top: 12px;
+  cursor: pointer; font-family: 'Share Tech Mono', monospace;
+  font-size: 0.8rem; letter-spacing: 2px; transition: all 0.2s;
+}
+.btn-add:hover { border-color: var(--cyan); color: var(--cyan); }
 
-  <!-- MODAL for adding/editing quests -->
-  <div id="modal" class="modal hidden">
-    <div class="modal-box">
-      <h2 class="modal-title" id="modal-title">NEW QUEST</h2>
-      <input type="text" id="quest-name" placeholder="Quest name" class="modal-input" />
-      <textarea id="quest-desc" placeholder="Description / mission brief" class="modal-input" rows="3"></textarea>
-      <select id="quest-track" class="modal-input">
-        <option value="AI QA">AI QA</option>
-        <option value="DATA">DATA</option>
-        <option value="TRAIN">TRAIN</option>
-        <option value="INFRA">INFRA</option>
-        <option value="FIELD">FIELD</option>
-        <option value="TEACH">TEACH</option>
-        <option value="RECRUIT">RECRUIT</option>
-      </select>
-      <select id="quest-status" class="modal-input">
-        <option value="active">ACTIVE</option>
-        <option value="pending">PENDING</option>
-        <option value="danger">DANGER</option>
-        <option value="done">DONE</option>
-      </select>
-      <input type="text" id="quest-deadline" placeholder="Deadline (e.g. JUL 22) — optional" class="modal-input" />
-      <div class="modal-buttons">
-        <button class="btn-save" id="btn-save-quest">SAVE</button>
-        <button class="btn-cancel" id="btn-cancel-quest">CANCEL</button>
-      </div>
-    </div>
-  </div>
+/* --- ALERTS --- */
+.alert-card {
+  border: 1px solid var(--red); background: #1a0808;
+  padding: 14px 16px; margin-bottom: 12px;
+}
+.alert-title { color: var(--red); font-size: 0.75rem; letter-spacing: 2px; margin-bottom: 8px; }
+.alert-body { font-size: 0.8rem; line-height: 1.6; }
 
-  <!-- Load the app logic last -->
-  <script src="app.js"></script>
+/* --- DAILY TASKS --- */
+.daily-task {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; margin-bottom: 6px;
+  background: var(--bg2); border: 1px solid var(--border);
+}
+.daily-check {
+  width: 18px; height: 18px; border: 1px solid var(--cyan);
+  cursor: pointer; flex-shrink: 0; display: flex;
+  align-items: center; justify-content: center; color: var(--cyan);
+}
+.daily-check.checked { background: var(--cyan); color: var(--bg); }
+.daily-name { flex: 1; font-size: 0.85rem; }
+.daily-name.checked { color: var(--text-dim); text-decoration: line-through; }
 
-</body>
-</html>
+/* --- LOG --- */
+.log-entry {
+  padding: 10px 16px; border-bottom: 1px solid var(--border);
+  display: flex; gap: 16px;
+}
+.log-date { color: var(--text-dim); font-size: 0.7rem; min-width: 160px; }
+.log-action { color: var(--cyan-dim); font-size: 0.75rem; min-width: 100px; }
+.log-detail { font-size: 0.75rem; }
+
+/* --- PROFILE --- */
+.profile-row {
+  display: flex; gap: 20px; padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.profile-label { color: var(--text-dim); font-size: 0.75rem; min-width: 80px; letter-spacing: 2px; }
+.profile-value { font-size: 0.85rem; }
+
+/* --- MODAL --- */
+.modal {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+}
+.modal.hidden { display: none; }
+.modal-box {
+  background: var(--bg2); border: 1px solid var(--cyan);
+  padding: 28px; width: 90%; max-width: 500px;
+}
+.modal-title { font-family: 'Orbitron', monospace; color: var(--cyan); margin-bottom: 16px; font-size: 1rem; letter-spacing: 3px; }
+.modal-input {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); padding: 10px 12px; margin-bottom: 10px;
+  font-family: 'Share Tech Mono', monospace; font-size: 0.85rem;
+}
+.modal-input:focus { outline: none; border-color: var(--cyan); }
+.modal-buttons { display: flex; gap: 10px; margin-top: 6px; }
+.btn-save {
+  flex: 1; background: var(--cyan); color: var(--bg);
+  border: none; padding: 10px; cursor: pointer;
+  font-family: 'Orbitron', monospace; font-size: 0.8rem; letter-spacing: 2px;
+}
+.btn-cancel {
+  flex: 1; background: none; color: var(--text-dim);
+  border: 1px solid var(--border); padding: 10px; cursor: pointer;
+  font-family: 'Share Tech Mono', monospace; font-size: 0.8rem;
+}
+
+/* --- BACKUP BAR --- */
+.backup-bar {
+  display: flex; gap: 10px; margin-top: 30px; padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.btn-backup {
+  background: none; border: 1px solid var(--border);
+  color: var(--text-dim); padding: 8px 16px; cursor: pointer;
+  font-family: 'Share Tech Mono', monospace; font-size: 0.75rem;
+  letter-spacing: 1px; transition: all 0.2s;
+}
+.btn-backup:hover { border-color: var(--cyan); color: var(--cyan); }
+
+/* --- UTILITY --- */
+.placeholder { color: var(--text-dim); font-size: 0.85rem; padding: 20px 0; }
+
+/* --- MOBILE --- */
+@media (max-width: 600px) {
+  .stats-row { grid-template-columns: repeat(3, 1fr); }
+  .tabs { overflow-x: auto; }
+  .tab { padding: 10px 12px; font-size: 0.7rem; }
+  .header-name { font-size: 1.5rem; }
+}

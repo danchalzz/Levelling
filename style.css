@@ -1,238 +1,410 @@
-/* ============================================================
-   STYLE.CSS — The Appearance
-   This file controls all the colours, fonts, spacing and layout.
-   If you want to change how something looks, change it here.
-   ============================================================ */
+// ============================================================
+// APP.JS — The Brain of the Frontend
+// This file does 4 things:
+//   1. Loads your data from the server when you open the page
+//   2. Draws all the quests, stats, logs etc on screen
+//   3. Handles clicks (add quest, mark done, delete etc)
+//   4. Saves any changes back to the server automatically
+// ============================================================
 
-/* --- FONTS & ROOT VARIABLES --- */
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
 
-:root {
-  --bg:        #080c14;
-  --bg2:       #0d1420;
-  --bg3:       #111927;
-  --border:    #1e3a5f;
-  --cyan:      #00d4ff;
-  --cyan-dim:  #0a7a99;
-  --gold:      #f0c040;
-  --red:       #ff4444;
-  --green:     #00ff88;
-  --grey:      #4a6080;
-  --text:      #c8dff0;
-  --text-dim:  #5a7a9a;
-}
+// --- STATE ---
+// This is the data currently loaded in memory (in the browser).
+// When you change something, we update this, then save it to the server.
+let state = {
+  quests: [],
+  daily: {},
+  dailyDate: '',
+  totalXP: 0,
+  log: [],
+  dismissedNotifs: []
+};
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+// Tracks which quest is being edited (null = creating a new one)
+let editingQuestId = null;
 
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Share Tech Mono', monospace;
-  min-height: 100vh;
-}
 
-#app {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 20px;
-}
+// ============================================================
+// SECTION 1 — TALKING TO THE SERVER
+// These two functions handle all communication with server.js
+// ============================================================
 
-/* --- HEADER --- */
-.header { text-align: center; padding: 30px 0 20px; }
-.header-label { color: var(--cyan-dim); font-size: 0.75rem; letter-spacing: 4px; margin-bottom: 8px; }
-.header-name { font-family: 'Orbitron', monospace; font-size: 2.2rem; font-weight: 900; color: var(--text); letter-spacing: 6px; }
-.header-rank { color: var(--cyan); font-size: 0.8rem; letter-spacing: 3px; margin-top: 8px; }
-
-/* --- XP BAR --- */
-.xp-bar-container {
-  display: flex; align-items: center; gap: 12px;
-  background: var(--bg2); border: 1px solid var(--border);
-  padding: 10px 16px; margin: 16px 0;
-}
-.xp-label { color: var(--cyan); font-size: 0.75rem; min-width: 24px; }
-.xp-bar { flex: 1; height: 8px; background: var(--bg3); border: 1px solid var(--border); }
-.xp-fill { height: 100%; background: var(--cyan); transition: width 0.5s; width: 0%; }
-.xp-value { color: var(--text-dim); font-size: 0.75rem; min-width: 80px; text-align: right; }
-
-/* --- STATS ROW --- */
-.stats-row {
-  display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
-  margin-bottom: 20px;
-}
-.stat-box {
-  background: var(--bg2); border: 1px solid var(--border);
-  padding: 12px 8px; text-align: center;
-}
-.stat-value { font-family: 'Orbitron', monospace; font-size: 1.4rem; color: var(--cyan); }
-.stat-label { font-size: 0.6rem; color: var(--text-dim); margin-top: 4px; letter-spacing: 1px; }
-
-/* --- TABS --- */
-.tabs {
-  display: flex; border-bottom: 1px solid var(--border);
-  margin-bottom: 20px; gap: 0;
-}
-.tab {
-  background: none; border: none; border-bottom: 2px solid transparent;
-  color: var(--text-dim); padding: 10px 20px; cursor: pointer;
-  font-family: 'Share Tech Mono', monospace; font-size: 0.8rem;
-  letter-spacing: 2px; transition: all 0.2s;
-}
-.tab:hover { color: var(--cyan); }
-.tab.active { color: var(--cyan); border-bottom-color: var(--cyan); }
-
-/* --- PANELS --- */
-.panel { min-height: 400px; }
-.tab-panel { display: block; }
-.tab-panel.hidden { display: none; }
-
-/* --- SECTION HEADERS --- */
-.section-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 14px; margin: 16px 0 8px;
-  border: 1px solid var(--border); background: var(--bg2);
-  font-size: 0.75rem; letter-spacing: 2px; color: var(--cyan-dim);
-  cursor: pointer;
-}
-.section-header.danger { border-color: var(--red); color: var(--red); }
-.section-header.active { border-color: var(--cyan); color: var(--cyan); }
-.section-header.done { border-color: var(--grey); color: var(--grey); }
-
-/* --- QUEST CARDS --- */
-.quest-card {
-  background: var(--bg2); border: 1px solid var(--border);
-  padding: 14px 16px; margin-bottom: 8px;
-  display: flex; justify-content: space-between; align-items: flex-start;
-  gap: 12px;
-}
-.quest-card.danger { border-left: 3px solid var(--red); }
-.quest-card.active { border-left: 3px solid var(--cyan); }
-.quest-card.pending { border-left: 3px solid var(--grey); }
-.quest-card.done { border-left: 3px solid var(--green); opacity: 0.6; }
-
-.quest-info { flex: 1; }
-.quest-name { font-size: 0.9rem; color: var(--text); margin-bottom: 4px; }
-.quest-desc { font-size: 0.75rem; color: var(--text-dim); line-height: 1.5; margin-bottom: 8px; }
-.quest-tags { display: flex; gap: 8px; flex-wrap: wrap; }
-.tag {
-  font-size: 0.65rem; padding: 2px 8px; border: 1px solid var(--border);
-  color: var(--cyan-dim); letter-spacing: 1px;
-}
-.tag.deadline { border-color: var(--gold); color: var(--gold); }
-.tag.danger { border-color: var(--red); color: var(--red); }
-.tag.done { border-color: var(--green); color: var(--green); }
-.tag.active { border-color: var(--cyan); color: var(--cyan); }
-.tag.pending { border-color: var(--grey); color: var(--grey); }
-
-.quest-actions { display: flex; gap: 6px; flex-shrink: 0; }
-.btn-edit, .btn-delete, .btn-status {
-  background: none; border: 1px solid var(--border);
-  color: var(--text-dim); padding: 4px 10px; cursor: pointer;
-  font-family: 'Share Tech Mono', monospace; font-size: 0.7rem;
-  transition: all 0.2s;
-}
-.btn-edit:hover { border-color: var(--cyan); color: var(--cyan); }
-.btn-delete:hover { border-color: var(--red); color: var(--red); }
-.btn-status:hover { border-color: var(--green); color: var(--green); }
-
-/* --- ADD BUTTON --- */
-.btn-add {
-  background: none; border: 1px dashed var(--border);
-  color: var(--text-dim); padding: 10px; width: 100%; margin-top: 12px;
-  cursor: pointer; font-family: 'Share Tech Mono', monospace;
-  font-size: 0.8rem; letter-spacing: 2px; transition: all 0.2s;
-}
-.btn-add:hover { border-color: var(--cyan); color: var(--cyan); }
-
-/* --- ALERTS --- */
-.alert-card {
-  border: 1px solid var(--red); background: #1a0808;
-  padding: 14px 16px; margin-bottom: 12px;
-}
-.alert-title { color: var(--red); font-size: 0.75rem; letter-spacing: 2px; margin-bottom: 8px; }
-.alert-body { font-size: 0.8rem; line-height: 1.6; }
-
-/* --- DAILY TASKS --- */
-.daily-task {
-  display: flex; align-items: center; gap: 12px;
-  padding: 12px 16px; margin-bottom: 6px;
-  background: var(--bg2); border: 1px solid var(--border);
-}
-.daily-check {
-  width: 18px; height: 18px; border: 1px solid var(--cyan);
-  cursor: pointer; flex-shrink: 0; display: flex;
-  align-items: center; justify-content: center; color: var(--cyan);
-}
-.daily-check.checked { background: var(--cyan); color: var(--bg); }
-.daily-name { flex: 1; font-size: 0.85rem; }
-.daily-name.checked { color: var(--text-dim); text-decoration: line-through; }
-
-/* --- LOG --- */
-.log-entry {
-  padding: 10px 16px; border-bottom: 1px solid var(--border);
-  display: flex; gap: 16px;
-}
-.log-date { color: var(--text-dim); font-size: 0.7rem; min-width: 160px; }
-.log-action { color: var(--cyan-dim); font-size: 0.75rem; min-width: 100px; }
-.log-detail { font-size: 0.75rem; }
-
-/* --- PROFILE --- */
-.profile-row {
-  display: flex; gap: 20px; padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-}
-.profile-label { color: var(--text-dim); font-size: 0.75rem; min-width: 80px; letter-spacing: 2px; }
-.profile-value { font-size: 0.85rem; }
-
-/* --- MODAL --- */
-.modal {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.8);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 100;
-}
-.modal.hidden { display: none; }
-.modal-box {
-  background: var(--bg2); border: 1px solid var(--cyan);
-  padding: 28px; width: 90%; max-width: 500px;
-}
-.modal-title { font-family: 'Orbitron', monospace; color: var(--cyan); margin-bottom: 16px; font-size: 1rem; letter-spacing: 3px; }
-.modal-input {
-  width: 100%; background: var(--bg); border: 1px solid var(--border);
-  color: var(--text); padding: 10px 12px; margin-bottom: 10px;
-  font-family: 'Share Tech Mono', monospace; font-size: 0.85rem;
-}
-.modal-input:focus { outline: none; border-color: var(--cyan); }
-.modal-buttons { display: flex; gap: 10px; margin-top: 6px; }
-.btn-save {
-  flex: 1; background: var(--cyan); color: var(--bg);
-  border: none; padding: 10px; cursor: pointer;
-  font-family: 'Orbitron', monospace; font-size: 0.8rem; letter-spacing: 2px;
-}
-.btn-cancel {
-  flex: 1; background: none; color: var(--text-dim);
-  border: 1px solid var(--border); padding: 10px; cursor: pointer;
-  font-family: 'Share Tech Mono', monospace; font-size: 0.8rem;
+// Load data from server (called once on page load)
+async function loadState() {
+  try {
+    const res = await fetch('/api/state');
+    const data = await res.json();
+    if (data && data.quests) {
+      state = data;
+    }
+  } catch (err) {
+    console.error('Could not load data from server:', err);
+  }
+  renderAll();
 }
 
-/* --- BACKUP BAR --- */
-.backup-bar {
-  display: flex; gap: 10px; margin-top: 30px; padding-top: 20px;
-  border-top: 1px solid var(--border);
+// Save data to server (called after every change)
+async function saveState() {
+  try {
+    await fetch('/api/state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(state)
+    });
+  } catch (err) {
+    console.error('Could not save data to server:', err);
+  }
 }
-.btn-backup {
-  background: none; border: 1px solid var(--border);
-  color: var(--text-dim); padding: 8px 16px; cursor: pointer;
-  font-family: 'Share Tech Mono', monospace; font-size: 0.75rem;
-  letter-spacing: 1px; transition: all 0.2s;
-}
-.btn-backup:hover { border-color: var(--cyan); color: var(--cyan); }
 
-/* --- UTILITY --- */
-.placeholder { color: var(--text-dim); font-size: 0.85rem; padding: 20px 0; }
 
-/* --- MOBILE --- */
-@media (max-width: 600px) {
-  .stats-row { grid-template-columns: repeat(3, 1fr); }
-  .tabs { overflow-x: auto; }
-  .tab { padding: 10px 12px; font-size: 0.7rem; }
-  .header-name { font-size: 1.5rem; }
+// ============================================================
+// SECTION 2 — RENDERING (Drawing things on screen)
+// Each render function handles one part of the page.
+// ============================================================
+
+function renderAll() {
+  renderXP();
+  renderStats();
+  renderQuests();
+  renderDaily();
+  renderLog();
 }
+
+// Draw the XP bar at the top
+function renderXP() {
+  const xpPerRank = 500;
+  const currentXP = state.totalXP || 0;
+  const percent = Math.min((currentXP % xpPerRank) / xpPerRank * 100, 100);
+
+  document.getElementById('xp-fill').style.width = percent + '%';
+  document.getElementById('xp-value').textContent =
+    currentXP + ' XP · E · next at ' + (Math.floor(currentXP / xpPerRank) + 1) * xpPerRank;
+}
+
+// Draw the 6 stat boxes
+function renderStats() {
+  const quests = state.quests || [];
+  const done  = quests.filter(q => q.status === 'done').length;
+  const apps  = quests.filter(q => q.track === 'AI QA' || q.track === 'RECRUIT').length;
+  const interviews = quests.filter(q => q.name && q.name.toLowerCase().includes('interview')).length;
+  const portfolio  = quests.filter(q => q.track === 'DATA' && q.status === 'done').length;
+
+  document.getElementById('stat-intellect').textContent    = Math.min(done * 3 + 70, 99);
+  document.getElementById('stat-adaptability').textContent = Math.min(quests.length * 2 + 50, 99);
+  document.getElementById('stat-applications').textContent = apps;
+  document.getElementById('stat-interviews').textContent   = interviews;
+  document.getElementById('stat-portfolio').textContent    = portfolio;
+  document.getElementById('stat-streak').textContent       = getDailyStreak();
+}
+
+// Calculate daily streak (how many days in a row you've used the app)
+function getDailyStreak() {
+  const daily = state.daily || {};
+  const today = new Date().toDateString();
+  return daily[today] ? '1+' : '0';
+}
+
+// Draw all quests grouped by status
+function renderQuests() {
+  const quests = state.quests || [];
+
+  // Danger alerts at the top
+  const danger = quests.filter(q => q.status === 'danger');
+  const alertsContainer = document.getElementById('alerts-container');
+  alertsContainer.innerHTML = '';
+  danger.forEach(q => {
+    alertsContainer.innerHTML += `
+      <div class="alert-card">
+        <div class="alert-title">⚠ SYSTEM NOTIFICATION — PRIORITY ALERT</div>
+        <div class="alert-body">${q.name}<br><small style="color:#888">${q.desc}</small></div>
+      </div>`;
+  });
+
+  renderQuestGroup('danger-quests',  '⚠ DANGER QUESTS — ACT NOW', danger,  'danger');
+  renderQuestGroup('active-quests',  '▶ ACTIVE QUESTS — IN PROGRESS', quests.filter(q => q.status === 'active'), 'active');
+  renderQuestGroup('pending-quests', '◈ PENDING QUESTS — QUEUED',     quests.filter(q => q.status === 'pending'), 'pending');
+  renderQuestGroup('done-quests',    '✓ COMPLETED QUESTS',            quests.filter(q => q.status === 'done'), 'done');
+}
+
+// Render one group of quests (e.g. all "active" quests)
+function renderQuestGroup(containerId, title, quests, statusClass) {
+  const container = document.getElementById(containerId);
+  if (quests.length === 0) { container.innerHTML = ''; return; }
+
+  const cards = quests.map(q => `
+    <div class="quest-card ${q.status}" data-id="${q.id}">
+      <div class="quest-info">
+        <div class="quest-name">${q.name}</div>
+        <div class="quest-desc">${q.desc}</div>
+        <div class="quest-tags">
+          <span class="tag">${q.track}</span>
+          <span class="tag ${q.status}">${q.status.toUpperCase()}</span>
+          ${q.deadline ? `<span class="tag deadline">${q.deadline}</span>` : ''}
+        </div>
+      </div>
+      <div class="quest-actions">
+        <button class="btn-edit" onclick="openEditQuest('${q.id}')">EDIT</button>
+        ${q.status !== 'done' ? `<button class="btn-status" onclick="markDone('${q.id}')">DONE</button>` : ''}
+        <button class="btn-delete" onclick="deleteQuest('${q.id}')">DEL</button>
+      </div>
+    </div>
+  `).join('');
+
+  container.innerHTML = `
+    <div class="section-header ${statusClass}">${title} [${quests.length}]</div>
+    ${cards}
+  `;
+}
+
+// Draw daily tasks
+function renderDaily() {
+  const container = document.getElementById('daily-tasks');
+  const daily = state.daily || {};
+  const today = new Date().toDateString();
+  const tasks = Object.entries(daily).filter(([key]) => !key.startsWith('_'));
+
+  if (tasks.length === 0) {
+    container.innerHTML = '<p class="placeholder">No daily tasks yet. Add your first one below.</p>';
+    return;
+  }
+
+  container.innerHTML = tasks.map(([id, task]) => `
+    <div class="daily-task">
+      <div class="daily-check ${task.done ? 'checked' : ''}" onclick="toggleDaily('${id}')">
+        ${task.done ? '✓' : ''}
+      </div>
+      <div class="daily-name ${task.done ? 'checked' : ''}">${task.name}</div>
+      <button class="btn-delete" onclick="deleteDaily('${id}')">DEL</button>
+    </div>
+  `).join('');
+}
+
+// Draw the activity log
+function renderLog() {
+  const container = document.getElementById('log-content');
+  const log = [...(state.log || [])].reverse(); // newest first
+
+  if (log.length === 0) {
+    container.innerHTML = '<p class="placeholder">No activity logged yet.</p>';
+    return;
+  }
+
+  container.innerHTML = log.map(entry => `
+    <div class="log-entry">
+      <span class="log-date">${new Date(entry.date).toLocaleString()}</span>
+      <span class="log-action">${entry.action}</span>
+      <span class="log-detail">${entry.detail || ''}</span>
+    </div>
+  `).join('');
+}
+
+
+// ============================================================
+// SECTION 3 — ACTIONS (Responding to clicks)
+// ============================================================
+
+// Mark a quest as done and award XP
+function markDone(questId) {
+  const quest = state.quests.find(q => q.id === questId);
+  if (!quest) return;
+
+  quest.status = 'done';
+  state.totalXP = (state.totalXP || 0) + 50; // 50 XP per completed quest
+
+  addLog('Quest Completed', quest.name);
+  saveState();
+  renderAll();
+}
+
+// Delete a quest
+function deleteQuest(questId) {
+  const quest = state.quests.find(q => q.id === questId);
+  if (!quest) return;
+  if (!confirm('Delete quest: ' + quest.name + '?')) return;
+
+  state.quests = state.quests.filter(q => q.id !== questId);
+  addLog('Deleted Quest', quest.name);
+  saveState();
+  renderAll();
+}
+
+// Toggle a daily task checked/unchecked
+function toggleDaily(taskId) {
+  if (!state.daily[taskId]) return;
+  state.daily[taskId].done = !state.daily[taskId].done;
+  saveState();
+  renderDaily();
+}
+
+// Delete a daily task
+function deleteDaily(taskId) {
+  delete state.daily[taskId];
+  saveState();
+  renderDaily();
+}
+
+// Add an entry to the activity log
+function addLog(action, detail) {
+  state.log = state.log || [];
+  state.log.push({ date: new Date().toISOString(), action, detail });
+  // Keep only last 50 entries
+  if (state.log.length > 50) state.log = state.log.slice(-50);
+}
+
+
+// ============================================================
+// SECTION 4 — MODAL (Add / Edit Quest popup)
+// ============================================================
+
+function openAddQuest() {
+  editingQuestId = null;
+  document.getElementById('modal-title').textContent = 'NEW QUEST';
+  document.getElementById('quest-name').value = '';
+  document.getElementById('quest-desc').value = '';
+  document.getElementById('quest-track').value = 'AI QA';
+  document.getElementById('quest-status').value = 'active';
+  document.getElementById('quest-deadline').value = '';
+  document.getElementById('modal').classList.remove('hidden');
+}
+
+function openEditQuest(questId) {
+  const quest = state.quests.find(q => q.id === questId);
+  if (!quest) return;
+
+  editingQuestId = questId;
+  document.getElementById('modal-title').textContent = 'EDIT QUEST';
+  document.getElementById('quest-name').value = quest.name;
+  document.getElementById('quest-desc').value = quest.desc;
+  document.getElementById('quest-track').value = quest.track;
+  document.getElementById('quest-status').value = quest.status;
+  document.getElementById('quest-deadline').value = quest.deadline || '';
+  document.getElementById('modal').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.add('hidden');
+  editingQuestId = null;
+}
+
+function saveQuest() {
+  const name     = document.getElementById('quest-name').value.trim();
+  const desc     = document.getElementById('quest-desc').value.trim();
+  const track    = document.getElementById('quest-track').value;
+  const status   = document.getElementById('quest-status').value;
+  const deadline = document.getElementById('quest-deadline').value.trim();
+
+  if (!name) { alert('Quest name is required.'); return; }
+
+  if (editingQuestId) {
+    // Update existing quest
+    const quest = state.quests.find(q => q.id === editingQuestId);
+    if (quest) {
+      quest.name = name;
+      quest.desc = desc;
+      quest.track = track;
+      quest.status = status;
+      quest.deadline = deadline;
+      addLog('Updated Quest', name);
+    }
+  } else {
+    // Create new quest
+    const newQuest = {
+      id: 'q' + Date.now(),
+      name, desc, track, status, deadline
+    };
+    state.quests.push(newQuest);
+    addLog('Added Quest', name);
+  }
+
+  closeModal();
+  saveState();
+  renderAll();
+}
+
+
+// ============================================================
+// SECTION 5 — BACKUP (Export and Import)
+// ============================================================
+
+// Export your data as a JSON file you can save on your computer
+function exportBackup() {
+  const json = JSON.stringify(state, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'system-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Import a backup JSON file and restore your data
+function importBackup(file) {
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!imported.quests) throw new Error('Invalid backup file');
+      state = imported;
+      await saveState();
+      renderAll();
+      alert('✅ Backup imported successfully!');
+    } catch (err) {
+      alert('❌ Could not read backup file. Make sure it is a valid JSON backup.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+
+// ============================================================
+// SECTION 6 — EVENT LISTENERS
+// These connect buttons and tabs to their functions above.
+// ============================================================
+
+// Tab switching
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.remove('hidden');
+  });
+});
+
+// Quest modal buttons
+document.getElementById('btn-add-quest').addEventListener('click', openAddQuest);
+document.getElementById('btn-save-quest').addEventListener('click', saveQuest);
+document.getElementById('btn-cancel-quest').addEventListener('click', closeModal);
+
+// Daily task - add new one
+document.getElementById('btn-add-daily').addEventListener('click', () => {
+  const name = prompt('Daily task name:');
+  if (!name || !name.trim()) return;
+  const id = 'daily_' + Date.now();
+  state.daily[id] = { name: name.trim(), done: false };
+  saveState();
+  renderDaily();
+});
+
+// Backup buttons
+document.getElementById('btn-export').addEventListener('click', exportBackup);
+document.getElementById('btn-import').addEventListener('click', () => {
+  document.getElementById('import-file').click();
+});
+document.getElementById('import-file').addEventListener('change', (e) => {
+  if (e.target.files[0]) importBackup(e.target.files[0]);
+});
+
+// Make edit/done functions available globally (called from HTML onclick attributes)
+window.openEditQuest = openEditQuest;
+window.markDone      = markDone;
+window.deleteQuest   = deleteQuest;
+window.toggleDaily   = toggleDaily;
+window.deleteDaily   = deleteDaily;
+
+
+// ============================================================
+// START — Load data when page opens
+// ============================================================
+loadState();
