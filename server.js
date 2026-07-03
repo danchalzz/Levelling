@@ -14,6 +14,7 @@ import { fileURLToPath } from 'url';
 const app = express();
 const PORT = process.env.PORT || 3000;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const publicPath = path.join(__dirname, 'public');
 
 // --- DATABASE CONNECTION ---
 // This reads the DATABASE_URL secret you set in Railway.
@@ -40,7 +41,12 @@ async function setupDatabase() {
 // --- MIDDLEWARE ---
 // These two lines allow the server to read JSON data and serve your public files.
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(publicPath));
+
+// Explicitly serve index.html for the root route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(publicPath, 'index.html'));
+});
 
 // ============================================================
 // API ROUTES — How the frontend talks to the backend
