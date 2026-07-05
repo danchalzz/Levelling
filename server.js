@@ -1,148 +1,97 @@
-// ============================================================
-// SERVER.JS — The Engine
-// This file does 4 things:
-//   1. Connects to your Neon database
-//   2. Serves your dashboard (public — anyone with the link can view)
-//   3. Handles loading data (public)
-//   4. Handles saving data (only allowed once YOU log in with your password)
-// ============================================================
-
 import express from 'express';
 import session from 'express-session';
-import { neon } from '@neondatabase/serverless';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { neon } from '@neondatabase/serverless';
 
-const app = express();
-const PORT = process.env.PORT || 3000;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const publicPath = path.join(__dirname, 'public');
 
-// --- REQUIRED SECRETS ---
-if (!process.env.DATABASE_URL) {
-  console.error('❌ DATABASE_URL is not set. Please add it in Railway → Variables.');
-  process.exit(1);
-}
-if (!process.env.ADMIN_PASSWORD) {
-  console.error('❌ ADMIN_PASSWORD is not set. Please add it in Railway → Variables.');
-  process.exit(1);
-}
-if (!process.env.SESSION_SECRET) {
-  console.error('❌ SESSION_SECRET is not set. Please add it in Railway → Variables (any long random string).');
+const { DATABASE_URL, ADMIN_PASSWORD, SESSION_SECRET, PORT } = process.env;
+
+if (!DATABASE_URL || !ADMIN_PASSWORD || !SESSION_SECRET) {
+  console.error('Missing required env vars: DATABASE_URL, ADMIN_PASSWORD, SESSION_SECRET must all be set.');
   process.exit(1);
 }
 
-const db = neon(process.env.DATABASE_URL);
+const sql = neon(DATABASE_URL);
 
-// --- SETUP ---
-async function setupDatabase() {
-  await db`
-    CREATE TABLE IF NOT EXISTS system_state (
-      id INTEGER PRIMARY KEY DEFAULT 1,
-      state JSONB NOT NULL,
-      updated_at TIMESTAMPTZ DEFAULT NOW()
-    )
-  `;
+async function ensureTable() {
+  await sql`CREATE TABLE IF NOT EXISTS system_state (
+    id INT PRIMARY KEY,
+    data JSONB
+  )`;
   console.log('✅ Database ready');
 }
 
-// --- MIDDLEWARE ---
-app.use(express.json());
+const app = express();
+app.use(express.json({ limit: '2mb' }));
 app.use(session({
-  secret: process.env.SESSION_SECRET,
+  secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
-    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     httpOnly: true,
-    secure: true,       // Railway serves over HTTPS
-    sameSite: 'lax'
+    sameSite: 'lax',
+    maxAge: 1000 * 60 * 60 * 24 * 30 // 30 days
   }
 }));
 
-// Everything in public/ (the dashboard itself) is visible to anyone with the link.
-app.use(express.static(publicPath));
-
-app.get('/', (req, res) => {
-  res.sendFile(path.join(publicPath, 'index.html'));
+// --- Auth routes ---
+app.post('/api/login', (req, res) => {
+  const { password } = req.body || {};
+  if (password && password === ADMIN_PASSWORD) {
+    req.session.authenticated = true;
+    return res.json({ ok: true });
+  }
+  return res.status(401).json({ ok: false });
 });
 
-// ============================================================
-// AUTH ROUTES
-// ============================================================
+app.post('/api/logout', (req, res) => {
+  req.session.destroy(() => res.json({ ok: true }));
+});
 
-// The frontend calls this on load to decide whether to show edit
-// controls (you) or read-only mode (everyone else).
 app.get('/api/auth-status', (req, res) => {
   res.json({ authenticated: !!(req.session && req.session.authenticated) });
 });
 
-app.post('/api/login', (req, res) => {
-  const { password } = req.body;
-  if (password === process.env.ADMIN_PASSWORD) {
-    req.session.authenticated = true;
-    return res.json({ success: true });
-  }
-  res.status(401).json({ error: 'Incorrect password' });
-});
-
-app.post('/api/logout', (req, res) => {
-  req.session.destroy(() => res.json({ success: true }));
-});
-
-// ============================================================
-// DATA ROUTES
-// ============================================================
-
-// LOAD DATA — public. Anyone visiting the link can see the dashboard.
+// --- State routes ---
 app.get('/api/state', async (req, res) => {
   try {
-    const rows = await db`SELECT state FROM system_state WHERE id = 1`;
-    if (rows.length === 0) {
-      return res.json({ state: null });
-    }
-    res.json({ state: rows[0].state });
+    const rows = await sql`SELECT data FROM system_state WHERE id = 1`;
+    res.json({ state: rows[0]?.data || null });
   } catch (err) {
-    console.error('Error loading state:', err);
-    res.status(500).json({ error: 'Could not load data' });
+    console.error('GET /api/state error', err);
+    res.status(500).json({ error: 'Failed to load state' });
   }
 });
 
-// SAVE DATA — protected. Only works if you're logged in as the owner.
-// (The frontend also hides/disables edit controls for guests, but this
-// server-side check is what actually stops someone from saving changes
-// even if they tried to call the API directly.)
-app.post('/api/state', async (req, res) => {
-  if (!req.session || !req.session.authenticated) {
-    return res.status(401).json({ error: 'Login required to save changes' });
-  }
+function requireAuth(req, res, next) {
+  if (req.session && req.session.authenticated) return next();
+  return res.status(401).json({ error: 'Not authenticated' });
+}
 
+app.post('/api/state', requireAuth, async (req, res) => {
+  const { state } = req.body || {};
+  if (!state) return res.status(400).json({ error: 'Missing state' });
   try {
-    const newState = req.body.state;
-    if (!newState || typeof newState !== 'object') {
-      return res.status(400).json({ error: 'state object required' });
-    }
-
-    const stateJson = JSON.stringify(newState);
-    await db`
-      INSERT INTO system_state (id, state, updated_at)
-      VALUES (1, ${stateJson}::jsonb, NOW())
-      ON CONFLICT (id) DO UPDATE
-        SET state = ${stateJson}::jsonb, updated_at = NOW()
+    await sql`
+      INSERT INTO system_state (id, data) VALUES (1, ${JSON.stringify(state)}::jsonb)
+      ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data
     `;
-
-    res.json({ success: true });
+    res.json({ ok: true });
   } catch (err) {
-    console.error('Error saving state:', err);
-    res.status(500).json({ error: 'Could not save data' });
+    console.error('POST /api/state error', err);
+    res.status(500).json({ error: 'Failed to save state' });
   }
 });
 
-// ============================================================
-// START
-// ============================================================
-setupDatabase().then(() => {
-  app.listen(PORT, () => {
-    console.log(`🚀 SYSTEM online at http://localhost:${PORT}`);
-  });
+// --- Static frontend ---
+app.use(express.static(path.join(__dirname, 'public')));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+const port = PORT || 8080;
+ensureTable().then(() => {
+  app.listen(port, () => console.log(`🚀 SYSTEM online at http://localhost:${port}`));
 });
