@@ -1,15 +1,17 @@
 {
   "name": "dee-system",
-  "version": "1.0.0",
-  "description": "Daniel Henry — Personal Command System",
-  "main": "server.js",
+  "version": "2.0.0",
   "type": "module",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.18.0",
-    "express-session": "^1.18.0",
-    "@neondatabase/serverless": "^0.9.0"
+    "@neondatabase/serverless": "^0.9.5",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
