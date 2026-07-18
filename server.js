@@ -23,7 +23,7 @@ async function ensureTable() {
     const otherCol = names.find(n => n !== 'id');
     if (otherCol) {
       // Existing table from an earlier version used a different column name — rename it, preserving data.
-      await sql.query(`ALTER TABLE system_state RENAME COLUMN "${otherCol}" TO data`, []);
+      await sql(`ALTER TABLE system_state RENAME COLUMN "${otherCol}" TO data`, []);
     } else {
       await sql`ALTER TABLE system_state ADD COLUMN data JSONB`;
     }
