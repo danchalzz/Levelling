@@ -16,10 +16,18 @@ if (!DATABASE_URL || !ADMIN_PASSWORD || !SESSION_SECRET) {
 const sql = neon(DATABASE_URL);
 
 async function ensureTable() {
-  await sql`CREATE TABLE IF NOT EXISTS system_state (
-    id INT PRIMARY KEY,
-    data JSONB
-  )`;
+  await sql`CREATE TABLE IF NOT EXISTS system_state (id INT PRIMARY KEY)`;
+  const cols = await sql`SELECT column_name FROM information_schema.columns WHERE table_name = 'system_state'`;
+  const names = cols.map(c => c.column_name);
+  if (!names.includes('data')) {
+    const otherCol = names.find(n => n !== 'id');
+    if (otherCol) {
+      // Existing table from an earlier version used a different column name — rename it, preserving data.
+      await sql.query(`ALTER TABLE system_state RENAME COLUMN "${otherCol}" TO data`, []);
+    } else {
+      await sql`ALTER TABLE system_state ADD COLUMN data JSONB`;
+    }
+  }
   console.log('✅ Database ready');
 }
 
